@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        package="op.po.mylibrary">
+
+    <application>
+        <activity
+                android:name=".ui.ThirdActivity"
+                android:exported="true"
+                android:label="@string/title_activity_third"
+                android:resizeableActivity="true"
+                android:theme="@style/Theme.Sparkj.NoActionBar"
+                tools:targetApi="24" />
+        <activity
+                android:name=".LibActivity"
+                android:label="@string/title_activity_main" />
+    </application>
+
+</manifest>
