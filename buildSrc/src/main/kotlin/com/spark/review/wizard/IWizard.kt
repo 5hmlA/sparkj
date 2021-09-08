@@ -1,8 +1,6 @@
 package com.spark.review.wizard
 
-import org.apache.commons.io.IOUtils
 import java.io.File
-import java.io.InputStream
 import java.util.jar.JarEntry
 
 /**
@@ -30,7 +28,7 @@ abstract class IWizard {
         return classFileByte
     }
 
-    open fun checkIfFileMatches(srcFile: File, destFile: File): Boolean {
+    open fun checkIfFileMatches(srcFile: File, destFile: File, srcDirectory: File): Boolean {
         return true
     }
 

@@ -1,6 +1,9 @@
 package com.spark.review.wizard
 
-import com.spark.Constants
+import com.spark.JConstants
+import com.spark.packageName
+import com.spark.sout
+import com.spark.toPackageName
 import org.apache.commons.io.IOUtils
 import org.objectweb.asm.*
 import java.io.File
@@ -31,8 +34,6 @@ class ArouterMagic : IWizard() {
         var arouterApiJarPath = "LogisticsCenter.class"
     }
 
-    val regex = Regex("/|\\\\")
-
     override fun transformStart() {
         routesClassNames.clear()
     }
@@ -44,23 +45,23 @@ class ArouterMagic : IWizard() {
 
     override fun checkIfJarMatches(srcJarFile: File, destJarFile: File): Boolean {
         if (srcJarFile.name.contains("arouter-api")) {
-            println(" ... $this >>  checkIfJarMatches ${srcJarFile.name}")
+            " ... $this >>  checkIfJarMatches ${srcJarFile.name}".sout()
             holdArouterApiJarPath(destJarFile.path)
             JarFile(srcJarFile).use { jarFile ->
                 jarFile.entries().toList().onEach {
                     if (it.name.contains(arouterFilePrefix)) {
-                        keepRouterClassName(it.name)
+                        keepRouterClassName(it.name.toPackageName())
                     }
                 }
             }
-        } else if (srcJarFile.name.equals(Constants.moduleClassName)) {
-            println(" ... $this >>  checkIfJarMatches ${srcJarFile.name}")
+        } else if (srcJarFile.name.equals(JConstants.moduleClassName)) {
+            " ... $this >>  checkIfJarMatches ${srcJarFile.name}".sout()
             val jarFile = JarFile(srcJarFile)
             jarFile.use {
                 it.entries().toList().onEach { entry ->
-                    println(".. in jar ${srcJarFile.name} >>>>>>>>>  ${entry.name} ")
+                    ".. in jar ${srcJarFile.name} >>>>>>>>>  ${entry.name} ".sout()
                     if (entry.name.contains(arouterFilePrefix)) {
-                        keepRouterClassName(entry.name)
+                        keepRouterClassName(entry.name.toPackageName())
                     }
                 }
             }
@@ -69,19 +70,20 @@ class ArouterMagic : IWizard() {
     }
 
 
-    override fun checkIfFileMatches(srcFile: File, destFile: File): Boolean {
+    override fun checkIfFileMatches(srcFile: File, destFile: File, srcDirectory: File): Boolean {
         if (srcFile.name.startsWith(arouterFilePrefix)) {
-            keepRouterClassName(srcFile.path)
+            " ... $this >>  checkIfFileMatches ${srcFile.path}".sout()
+            keepRouterClassName(srcFile.packageName(srcDirectory))
         }
         return false
     }
 
 
     override fun transformEnd() {
-        println(" ... $this >> transformEnd ")
+        " ... $this >> transformEnd ".sout()
         //修改jar
         if (arouterApiJarPath.endsWith(".class")) {
-            println(" ... $this >>  error")
+            " ... $this >>  error".sout()
             return
         }
         if (routesClassNames.isNotEmpty()) {
@@ -94,8 +96,7 @@ class ArouterMagic : IWizard() {
         arouterApiJarPath = path
     }
 
-    private fun keepRouterClassName(path: String) {
-        val className = path.substring(path.indexOf("com"), path.indexOf(".class")).replace(regex, ".")
+    private fun keepRouterClassName(className: String) {
         routesClassNames.add(className)
     }
 

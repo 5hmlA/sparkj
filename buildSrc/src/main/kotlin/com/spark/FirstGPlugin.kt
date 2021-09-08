@@ -1,16 +1,22 @@
 package com.spark
 
+import com.android.build.gradle.AppExtension
+import com.android.build.gradle.AppPlugin
 import com.spark.extension.AppleArg
 import com.spark.extension.Argument
 import com.spark.extension.GreetingPluginExtension
 import com.spark.extension.Student
+import com.spark.review.wizard.ArouterMagic
 import com.spark.task.ExtensionTask
 import com.spark.task.FirstTask
 import com.spark.task.GreetingToFileTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtensionAware
+import org.gradle.kotlin.dsl.findByType
+import org.gradle.kotlin.dsl.hasPlugin
 import java.io.File
+import java.util.*
 
 /**
  * @author yun.
@@ -29,7 +35,7 @@ class FirstGPlugin : Plugin<Project> {
         project.logger.debug(" ==== debug === ")
         project.logger.info(" ==== info === ")
         project.logger.warn(" ==== warn === ")
-        project.logger.error(" ==== error === ")
+        project.logger.error(" ==== error === ${project.buildDir.path}")
         //<editor-fold desc="添加 extension">
         projectExtensionsLean(project)
         //</editor-fold>
@@ -117,5 +123,48 @@ class FirstGPlugin : Plugin<Project> {
 //                it.include("**/*.js")
 //            }
 //        }
+    }
+
+    fun test(project: Project){
+        //监听每个task的执行
+//        project.gradle.addListener(object : TaskExecutionListener {
+//            override fun beforeExecute(p0: Task) {
+//                println("*********** beforeExecute ${p0.path} **************")
+//            }
+//
+//            override fun afterExecute(p0: Task, p1: TaskState) {
+//                println("*********** afterExecute ${p0.path} **************")
+//            }
+//        })
+        println(ArouterMagic.arouterApiJarPath)
+        //gradle.properties是否存在
+        if (project.rootProject.file("gradle.properties").exists()) {
+            //gradle.properties文件->输入流
+            val properties = Properties()
+            project.rootProject.file("gradle.properties").inputStream().use {
+                properties.load(it)
+            }
+
+            "false".toBoolean()
+            println("read data from gradle.properties > ${properties.getProperty("android.useAndroidX", "false")}")
+        }
+
+
+        println("${project.name}  ${project.plugins.hasPlugin("com.android.application")}")
+        println("${project.name}  ${project.plugins.hasPlugin(AppPlugin::class)}")
+
+        println("${project.name}  ${project.extensions.findByName("android")}")
+        println("${project.name}  ${project.extensions.getByName("android")}")
+        //[DefaultTaskExecutionRequest{args=[assembleDebug],projectPath='null'}]
+        //[DefaultTaskExecutionRequest{args=[clean, assembleRelease],projectPath='null'}]
+
+
+//        val android = project.extensions.findByType(AppExtension::class.java)
+        val android = project.extensions.findByType<AppExtension>()
+        android?.registerTransform(SparkTransform(project))
+        println("project name: ${project.name}  $android  ${android?.transforms}")
+        //library中
+//        val libraryExtension = project.extensions.findByType<LibraryExtension>()
+//        libraryExtension?.registerTransform(MyTransform(project))
     }
 }

@@ -1,18 +1,16 @@
 package com.spark.review
 
+import com.spark.skipJar
 import org.apache.commons.io.FileUtils
 import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
-import java.util.zip.ZipEntry
 import com.spark.review.wizard.ActivityMagic
 import com.spark.review.wizard.ActivityMagic2
 import com.spark.review.wizard.ArouterMagic
 import com.spark.review.wizard.IWizard
+import com.spark.skipFile
+import com.spark.sout
 import com.spark.work.Schedulers
-import org.apache.commons.io.IOUtils
 import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import java.util.*
 
 /**
@@ -37,7 +35,7 @@ class Reviewer : IReview {
     //        val transformCases = mutableListOf<ITransformCase>(ActivityTransform())
 //    private val transformCases = mutableListOf<ITransformCase>(LoggerTransform())
 
-//        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform())
+    //        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform())
 //        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform(), LoggerTransform(), ActivityTransform())
     val wizards = mutableListOf<IWizard>(
         ActivityMagic2(), ActivityMagic(),
@@ -67,29 +65,23 @@ class Reviewer : IReview {
     ) {
         scheduler.submit {
             val destFilePath = srcFile.absolutePath.replace(srcDirectory.absolutePath, destDirectory.absolutePath)
-//            val destFilePath = srcFile.absolutePath.subSequence(srcDirectory.absolutePath, destDirectory.absolutePath)
+            "reviewFile  ${srcFile.path} >> $destFilePath".sout()
             val destfile = File(destFilePath)
-            FileUtils.touch(destfile)
-            var inputStream: InputStream? = null
-            var classFileByte: ByteArray? = null
-
-            wizards.forEachIndexed { index, wizard ->
-                if (wizard.checkIfFileMatches(srcFile, destfile)) {
-                    println(">>> reviewFile  $wizard => $srcFile > $destFilePath")
-                    if (inputStream == null) {
-                        inputStream = srcFile.inputStream()
-                        classFileByte = inputStream!!.readBytes()
-                    }
-                    classFileByte = wizard.transformFile(classFileByte!!)
-                }
-            }
-
-            if (classFileByte == null) {
-                FileUtils.copyFile(srcFile, destfile)
+            // reviewFile  build\tmp\kotlin-classes\taining\META-INF\apptest_taining.kotlin_module >> intermediates\transforms\JsparkTransform\taining\76\META-INF\apptest_taining.kotlin_module
+            val matchedWizards = if (srcFile.skipFile()) {
+                Collections.emptyList<IWizard>()
             } else {
-                destfile.outputStream().use { output ->
-                    output.write(classFileByte!!)
+                wizards.filter { it.checkIfFileMatches(srcFile, destfile, srcDirectory) }
+            }
+            if (matchedWizards.isNotEmpty()) {
+                ">>> reviewFile srcDirectory : ${srcDirectory.path} >> transform size : $matchedWizards".sout()
+                srcFile.review(destfile) { bytes ->
+                    matchedWizards.fold(bytes) { acc, wizard ->
+                        wizard.transformFile(acc)
+                    }
                 }
+            } else {
+                FileUtils.copyFile(srcFile, destfile)
             }
         }
     }
@@ -97,39 +89,30 @@ class Reviewer : IReview {
     override fun reviewJar(srcJarFile: File, destJarFile: File) {
         scheduler.submit {
             FileUtils.touch(destJarFile)
-            val wantHandle = wizards.filter { it.checkIfJarMatches(srcJarFile, destJarFile) }
-            if (wantHandle.isNotEmpty()) {
+
+            val matchedWizards = if (srcJarFile.skipJar()) {
+                //过滤R.jar
+                Collections.emptyList<IWizard>()
+            } else {
+                wizards.filter { it.checkIfJarMatches(srcJarFile, destJarFile) }
+            }
+//            val matchedWizards = wizards.filter { it.checkIfJarMatches(srcJarFile, destJarFile) }
+            "reviewJar  ${srcJarFile.path} >> ${destJarFile.path}".sout()
+            if (matchedWizards.isNotEmpty()) {
                 //transformJar
-                println(">>> reviewJar  $srcJarFile >> transform size : $wizards")
-                val destjarOutputStream = JarOutputStream(FileOutputStream(destJarFile))
-                destjarOutputStream.use {
-                    val jarFile = JarFile(srcJarFile)
-                    jarFile.use {
-                        jarFile.entries().toList().forEach {
-                            destjarOutputStream.putNextEntry(ZipEntry(it.name))
-                            jarFile.getInputStream(it).use { inputStream ->
-                                var classFileByte: ByteArray = IOUtils.toByteArray(inputStream)
-                                wantHandle.forEachIndexed { index, wizard ->
-                                    if (wizard.checkIfJarEntryMatches(it, srcJarFile, destJarFile)) {
-                                        println(">>> reviewJar  $wizard => ${it.name}")
-                                        classFileByte = wizard.transformJarEntry(classFileByte)
-                                    }
-
-                                }
-                                destjarOutputStream.write(classFileByte)
-                                destjarOutputStream.closeEntry()
-                            }
-
+                ">>> reviewJar  ${srcJarFile.path} >> transform size : $matchedWizards".sout()
+//                if (srcJarFile.isRjar())
+                JarFile(srcJarFile).review(destJarFile) { jarEntry, bytes ->
+                    matchedWizards.filter { it.checkIfJarEntryMatches(jarEntry, srcJarFile, destJarFile) }
+                        .fold(bytes) { acc, wizard ->
+                            wizard.transformJarEntry(acc)
                         }
-                    }
                 }
-
             } else {
                 FileUtils.copyFile(srcJarFile, destJarFile)
             }
         }
     }
-
 
     override fun merge() {
         scheduler.await()

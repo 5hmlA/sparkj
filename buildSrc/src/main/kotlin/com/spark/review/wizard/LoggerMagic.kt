@@ -1,5 +1,6 @@
 package com.spark.review.wizard
 
+import com.spark.sout
 import java.io.File
 import java.util.jar.JarEntry
 
@@ -13,25 +14,25 @@ import java.util.jar.JarEntry
 class LoggerMagic : IWizard() {
 
     override fun transformStart() {
-        println(" >>>>>>>>> transformStart ")
+        " >>>>>>>>> transformStart ".sout()
     }
 
     override fun checkIfJarMatches(srcJarFile: File, destJarFile: File): Boolean {
-        println(" >>>>>>>>> checkHandleWithJar ${srcJarFile.absolutePath}  > ${destJarFile.absolutePath}")
+        " >>>>>>>>> checkIfJarMatches ${srcJarFile.absolutePath}  > ${destJarFile.absolutePath}".sout()
         return true
     }
 
     override fun checkIfJarEntryMatches(srcJarEntry: JarEntry, srcJarFile: File, destJarFile: File): Boolean {
-        println(" >>>>>>>>> checkHandleWithJar ${srcJarEntry.name} ")
+        " >>>>>>>>> checkIfJarEntryMatches ${srcJarEntry.name} ".sout()
         return true
     }
 
-    override fun checkIfFileMatches(srcFile: File, destFile: File): Boolean {
-        println(" >>>>>>>>> checkHandleWithFile ${srcFile.absolutePath}  > ${destFile.absolutePath}")
+    override fun checkIfFileMatches(srcFile: File, destFile: File, srcDirectory: File): Boolean {
+        " >>>>>>>>> checkIfFileMatches ${srcFile.absolutePath}  > ${destFile.absolutePath}".sout()
         return true
     }
 
     override fun transformEnd() {
-        println(" >>>>>>>>> transformEnd ")
+        " >>>>>>>>> transformEnd ".sout()
     }
 }

@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import java.io.File
 import org.apache.commons.io.FileUtils
 import java.util.concurrent.TimeUnit
+import com.spark.review.SparkEnvironment
 
 /**
  * @author yun.
@@ -16,6 +17,11 @@ import java.util.concurrent.TimeUnit
  * <p><a href="https://github.com/ZuYun">github</a>
  */
 class SparkTransform constructor(project: Project) : Transform() {
+    init {
+        SparkEnvironment.environment.project = project
+    }
+
+
 //    用户自定义的Transform，会比系统的Transform先执行
 
     private val reviewer = Reviewer()
@@ -37,11 +43,14 @@ class SparkTransform constructor(project: Project) : Transform() {
 
     override fun transform(transformInvocation: TransformInvocation) {
         super.transform(transformInvocation)
+        SparkEnvironment.environment.transformInvocation = transformInvocation
+        println("=============================================")
+        println(transformInvocation.context.variantName)
         val nanoStartTime = System.nanoTime()
 
         reviewer.gerrit()
 
-        println(" # $this == ${transformInvocation.isIncremental} ---- ${transformInvocation.context.variantName}")
+        " # $this == ${transformInvocation.isIncremental} ---- ${transformInvocation.context.variantName}".sout()
         if (!transformInvocation.isIncremental) {
             //不是增量编译，则清空output目录
             transformInvocation.outputProvider.deleteAll()
@@ -51,13 +60,16 @@ class SparkTransform constructor(project: Project) : Transform() {
 //        ADDED、CHANGED 正常处理，输出给下一个任务
 //        REMOVED 移除outputProvider获取路径对应的文件
         transformInvocation.inputs.onEach {
+            "=============== transformInvocation.inputs.onEach ==================== start".sout()
             reviewDirectory(it, transformInvocation)
             reviewJarFile(it, transformInvocation)
+            "================ transformInvocation.inputs.onEach =================== end ".sout()
         }
 
         reviewer.merge()
         val cost = System.nanoTime() - nanoStartTime
-        println(" # $this == cost:$cost > ${TimeUnit.NANOSECONDS.toSeconds(cost)}")
+        " # $this == cost:$cost > ${TimeUnit.NANOSECONDS.toSeconds(cost)}".sout()
+        SparkEnvironment.environment.release()
     }
 
     private fun reviewJarFile(
@@ -68,22 +80,21 @@ class SparkTransform constructor(project: Project) : Transform() {
             //                JarInput：它代表着以jar包方式参与项目编译的所有本地jar包或远程jar包，可以借助于它来实现动态添加jar包操作。
             //这里包括子模块打包的class文件debug\classes.jar
             //目标文件都被用数字重命名了，只有第一个transform的文件没被重命名
-            //如果移除了一个依赖，这个jar包就再也不会输入，自然也就不会出现Status.REMOVED状态的jar包了
-
             val destJarFile = transformInvocation.outputProvider.getContentLocation(
                 jar.name, jar.contentTypes, jar.scopes,
                 Format.JAR
             )
+            " # $this ==  reviewJarFile ${jar.file} =======".sout()
             if (transformInvocation.isIncremental) {
                 when (jar.status!!) {
                     Status.NOTCHANGED -> {
                     }
                     Status.ADDED, Status.CHANGED -> {
-                        println(" # $this ==  jarInputs ${jar.status} : ${jar.file.path} =======")
+                        " # $this ==  jarInputs ${jar.status} : ${jar.file.path} =======".sout()
                         reviewer.reviewJar(jar.file, destJarFile)
                     }
                     Status.REMOVED -> {
-                        println(" # $this ==  jarInputs ${jar.status} : ${jar.file.path} =======")
+                        " # $this ==  jarInputs ${jar.status} : ${jar.file.path} =======".sout()
                         if (destJarFile.exists()) {
                             FileUtils.deleteQuietly(destJarFile)
                         }
@@ -102,22 +113,18 @@ class SparkTransform constructor(project: Project) : Transform() {
         //input 是循环
         //可能出现 direct没有jar多，direct很多jar没有
         it.directoryInputs.onEach { dir ->
-            //                DirectoryInput：它代表着以源码方式参与项目编译的所有目录结构及其目录下的源码文件，可以借助于它来修改输出文件的目录结构、目标字节码文件。
-
-            //                第一次编译或clean后重新编译directory.changedFiles为空，需要做好区分
-            //                经测试，删除一个java文件，对应的class文件输入不会出现REMOVED状态，也就是不能从changeFiles里面获取被删除的文件
-
-            //目标文件都被用数字重命名了
+            //DirectoryInput：它代表着以源码方式参与项目编译的所有目录结构及其目录下的源码文件，可以借助于它来修改输出文件的目录结构、目标字节码文件。
             val destDirectory = transformInvocation.outputProvider.getContentLocation(
                 dir.name, dir.contentTypes, dir.scopes,
                 Format.DIRECTORY
             )
             val srcDirectory = dir.file
+            " # $this ==  reviewDirectory ${srcDirectory.path} =======".sout()
             if (transformInvocation.isIncremental) {
                 //https://juejin.cn/post/6916304559602139149
                 //https://github.com/Leifzhang/AndroidAutoTrack
                 dir.changedFiles.onEach { entry ->
-                    println(" # $this ==  directoryInputs ${entry.value} : ${entry.key.path} =======")
+                    " # $this ==  directoryInputs ${entry.value} : ${entry.key.path} =======".sout()
                     when (entry.value!!) {
                         Status.NOTCHANGED -> {
                         }
