@@ -1,3 +1,4 @@
+import com.android.build.api.variant.ApplicationVariant
 
 plugins {
     id("com.android.application")
@@ -28,11 +29,11 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),"proguard-rules.pro")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
-        
+
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -51,6 +52,11 @@ android {
             excludes += listOf("/META-INF/{AL2.0,LGPL2.1}")
         }
     }
+
+    applicationVariants.all(Action<com.android.build.gradle.api.ApplicationVariant> {
+        println("-------------${this.name}")
+        println(this.outputs.size)
+    })
 }
 
 

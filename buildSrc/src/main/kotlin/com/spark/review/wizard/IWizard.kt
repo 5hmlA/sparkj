@@ -1,6 +1,5 @@
-package com.spark.wizard
+package com.spark.review.wizard
 
-import com.android.build.gradle.internal.LoggerWrapper
 import org.apache.commons.io.IOUtils
 import java.io.File
 import java.io.InputStream
@@ -15,6 +14,8 @@ import java.util.jar.JarEntry
  */
 abstract class IWizard {
 
+    fun enable(): Boolean = true
+
     abstract fun transformStart()
 
     open fun checkIfJarMatches(srcJarFile: File, destJarFile: File): Boolean {
@@ -25,16 +26,16 @@ abstract class IWizard {
         return true
     }
 
-    open fun transformJar(inputStream: InputStream): ByteArray {
-        return IOUtils.toByteArray(inputStream)
+    open fun transformJarEntry(classFileByte: ByteArray): ByteArray {
+        return classFileByte
     }
 
     open fun checkIfFileMatches(srcFile: File, destFile: File): Boolean {
         return true
     }
 
-    open fun transformFile(inputStream: InputStream): ByteArray {
-        return IOUtils.toByteArray(inputStream)
+    open fun transformFile(classFileByte: ByteArray): ByteArray {
+        return classFileByte
     }
 
     abstract fun transformEnd()

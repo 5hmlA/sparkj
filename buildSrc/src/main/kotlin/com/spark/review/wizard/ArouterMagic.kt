@@ -1,4 +1,4 @@
-package com.spark.wizard
+package com.spark.review.wizard
 
 import com.spark.Constants
 import org.apache.commons.io.IOUtils

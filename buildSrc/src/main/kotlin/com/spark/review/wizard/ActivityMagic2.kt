@@ -1,4 +1,4 @@
-package com.spark.wizard
+package com.spark.review.wizard
 
 import com.spark.Constants
 import org.objectweb.asm.*
@@ -27,8 +27,8 @@ class ActivityMagic2 : IWizard() {
         return srcJarEntry.name.endsWith("Activity.class")
     }
 
-    override fun transformJar(inputStream: InputStream): ByteArray {
-        return transformFile(inputStream)
+    override fun transformJarEntry(classFileByte: ByteArray): ByteArray {
+        return transformFile(classFileByte)
     }
 
     override fun checkIfFileMatches(srcFile: File, destFile: File): Boolean {
@@ -39,8 +39,8 @@ class ActivityMagic2 : IWizard() {
         return false
     }
 
-    override fun transformFile(inputStream: InputStream): ByteArray {
-        val classReader = ClassReader(inputStream)
+    override fun transformFile(classFileByte: ByteArray): ByteArray {
+        val classReader = ClassReader(classFileByte)
         val classWriter = ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
         val lifecycleClassVisitor = LifecycleClassVisitor(classVisitor = classWriter)
         classReader.accept(lifecycleClassVisitor, ClassReader.EXPAND_FRAMES)

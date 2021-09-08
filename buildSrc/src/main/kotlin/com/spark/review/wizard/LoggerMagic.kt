@@ -1,4 +1,4 @@
-package com.spark.wizard
+package com.spark.review.wizard
 
 import java.io.File
 import java.util.jar.JarEntry

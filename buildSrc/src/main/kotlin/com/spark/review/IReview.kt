@@ -1,19 +1,19 @@
-package com.spark.transform
+package com.spark.review
 
 import org.apache.commons.io.FileUtils
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
-import com.spark.wizard.ActivityMagic
-import com.spark.wizard.ActivityMagic2
-import com.spark.wizard.ArouterMagic
-import com.spark.wizard.IWizard
+import com.spark.review.wizard.ActivityMagic
+import com.spark.review.wizard.ActivityMagic2
+import com.spark.review.wizard.ArouterMagic
+import com.spark.review.wizard.IWizard
 import com.spark.work.Schedulers
 import org.apache.commons.io.IOUtils
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.*
 
 /**
  * @author yun.
@@ -34,15 +34,23 @@ interface IReview {
 }
 
 class Reviewer : IReview {
-
     //        val transformCases = mutableListOf<ITransformCase>(ActivityTransform())
 //    private val transformCases = mutableListOf<ITransformCase>(LoggerTransform())
+
+//        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform())
+//        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform(), LoggerTransform(), ActivityTransform())
     val wizards = mutableListOf<IWizard>(
         ActivityMagic2(), ActivityMagic(),
         ArouterMagic()
     )
-//        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform())
-//        val transformCases = mutableListOf<ITransformCase>(ActivityTransform(), ArouterTransform(), LoggerTransform(), ActivityTransform())
+
+    init {
+        //利用autoService自动发现服务
+        ServiceLoader.load(IWizard::class.java).iterator().asSequence().filter { it.enable() }.forEach {
+            wizards.add(it)
+        }
+    }
+
 
     private val scheduler = Schedulers()
 
@@ -63,26 +71,24 @@ class Reviewer : IReview {
             val destfile = File(destFilePath)
             FileUtils.touch(destfile)
             var inputStream: InputStream? = null
-            var newByte: ByteArray? = null
+            var classFileByte: ByteArray? = null
+
             wizards.forEachIndexed { index, wizard ->
                 if (wizard.checkIfFileMatches(srcFile, destfile)) {
                     println(">>> reviewFile  $wizard => $srcFile > $destFilePath")
                     if (inputStream == null) {
                         inputStream = srcFile.inputStream()
+                        classFileByte = inputStream!!.readBytes()
                     }
-                    inputStream?.use {
-                        newByte = wizard.transformFile(it)
-                    }
-                    if (index < wizards.size - 1) {
-                        inputStream = ByteArrayInputStream(newByte)
-                    }
+                    classFileByte = wizard.transformFile(classFileByte!!)
                 }
             }
-            if (newByte == null) {
+
+            if (classFileByte == null) {
                 FileUtils.copyFile(srcFile, destfile)
             } else {
                 destfile.outputStream().use { output ->
-                    output.write(newByte!!)
+                    output.write(classFileByte!!)
                 }
             }
         }
@@ -101,29 +107,19 @@ class Reviewer : IReview {
                     jarFile.use {
                         jarFile.entries().toList().forEach {
                             destjarOutputStream.putNextEntry(ZipEntry(it.name))
-                            var inputStream = jarFile.getInputStream(it)
-                            var newByte: ByteArray? = null
-                            wantHandle.forEachIndexed { index, wizard ->
-                                if (wizard.checkIfJarEntryMatches(it, srcJarFile, destJarFile)) {
-                                    println(">>> reviewJar  $wizard => ${it.name}")
-                                    inputStream.use {
-                                        newByte = wizard.transformJar(inputStream)
+                            jarFile.getInputStream(it).use { inputStream ->
+                                var classFileByte: ByteArray = IOUtils.toByteArray(inputStream)
+                                wantHandle.forEachIndexed { index, wizard ->
+                                    if (wizard.checkIfJarEntryMatches(it, srcJarFile, destJarFile)) {
+                                        println(">>> reviewJar  $wizard => ${it.name}")
+                                        classFileByte = wizard.transformJarEntry(classFileByte)
                                     }
-                                    if (index < wantHandle.size - 1) {
-                                        inputStream = ByteArrayInputStream(newByte)
-                                    }
+
                                 }
-
+                                destjarOutputStream.write(classFileByte)
+                                destjarOutputStream.closeEntry()
                             }
 
-                            if (newByte == null) {
-                                newByte = IOUtils.toByteArray(inputStream)
-                            }
-                            inputStream.close()
-
-                            destjarOutputStream.write(newByte!!)
-
-                            destjarOutputStream.closeEntry()
                         }
                     }
                 }

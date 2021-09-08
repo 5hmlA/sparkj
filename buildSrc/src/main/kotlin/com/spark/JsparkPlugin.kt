@@ -2,8 +2,7 @@ package com.spark
 
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
-import com.spark.transform.SparkTransform
-import com.spark.wizard.ArouterMagic
+import com.spark.review.wizard.ArouterMagic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.findByType
@@ -29,7 +28,6 @@ class JsparkPlugin : Plugin<Project> {
 //                println("*********** afterExecute ${p0.path} **************")
 //            }
 //        })
-
         println(ArouterMagic.arouterApiJarPath)
         //gradle.properties是否存在
         if (project.rootProject.file("gradle.properties").exists()) {

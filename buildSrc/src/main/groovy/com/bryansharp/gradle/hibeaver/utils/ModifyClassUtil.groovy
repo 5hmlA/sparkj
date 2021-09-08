@@ -142,7 +142,7 @@ public class ModifyClassUtil {
                             if (methodDesc != null) {
                                 if (Util.isPatternMatch(methodDesc, metMatchType, desc)) {
                                     if (onlyVisit) {
-                                        myMv = new MethodLogAdapter(cv.visitMethod(access, name, desc, signature, exceptions));
+//                                        myMv = new MethodLogAdapter(cv.visitMethod(access, name, desc, signature, exceptions));
                                     } else {
                                         try {
                                             myMv = visit(cv, access, name, desc, signature, exceptions);

@@ -1,7 +1,8 @@
-package com.spark.transform
+package com.spark
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
+import com.spark.review.Reviewer
 import org.gradle.api.Project
 import java.io.File
 import org.apache.commons.io.FileUtils
